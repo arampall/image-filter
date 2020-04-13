@@ -1,6 +1,7 @@
-import express from 'express';
+import express, {Request, Response} from 'express';
 import bodyParser from 'body-parser';
 import {filterImageFromURL, deleteLocalFiles} from './util/util';
+import validUrl = require('valid-url');
 
 (async () => {
 
@@ -28,6 +29,30 @@ import {filterImageFromURL, deleteLocalFiles} from './util/util';
   //   the filtered image file [!!TIP res.sendFile(filteredpath); might be useful]
 
   /**************************************************************************** */
+  app.get('/filteredimage', async(req: Request, res: Response) => {
+    let imageUrl: string = req.query.image_url;
+    console.log(imageUrl);
+    if(!imageUrl){
+      res.status(404).send('Image Url not found. Please provide a valid image url');
+    }
+  
+    if(!validUrl.isUri(imageUrl)){
+      console.log('It is an invalid Uri');
+      res.status(400).send('Bad Request... please correct the Image URL and retry the request');
+    }
+ 
+    try{
+      let absFilePath: string = await filterImageFromURL(imageUrl);
+      res.status(200).sendFile(absFilePath, function(){
+          deleteLocalFiles([absFilePath])
+      });
+    }
+    catch(error){
+      console.error(error);
+      res.status(400).send("System could not handle the request. It is either that the system cannot find any image at the given location or the server took too long to respond.");
+    }
+
+  });
 
   //! END @TODO1
   
